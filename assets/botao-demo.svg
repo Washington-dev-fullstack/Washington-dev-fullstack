@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 159 52" width="159" height="52" role="img" aria-label="Abrir demo"><title>Abrir demo</title><style>@font-face{font-family:SG;font-weight:700;src:url(data:font/woff2;base64,d09GMgABAAAAAAOAABAAAAAABoAAAAMlAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhwbIBwqBmA/U1RBVCoAbBEICoVQhF0BNgIkAzALGgAEIAVMByAMBxvdBACuBuzGMYcLETwCA0NVFbDHvlE5qk7bPB741/vv9znJU5KBXInoprI7uBK6WT3ZTW+U/OC1t/1yDmj3cNVBifCVgF3z438af6rCNFW16wrkCDSBrOrlaYblrVqwBWC9nidI7das3TY48PLyHxYg/zkL5/9m2gcqDLwtFuLYmPc8LbAxQQOKo3DixMXd4ClwZ9mZN3INqaLV1m3i/cMIKABRFJUJKlQJAjJNNRdGVNW3wyyFEkBApr2OIqeYfenI+iLcTKA/jc2iRGXEvWQOYPy5SFiEtBBOsYPnGDUecFdLq5O7/59It2siECB8jjeipUQQVAqoK6CpuGFqel0DRBEg7YOIBHUlUQdIzQG11ZSIWhpq1IQZC5asluCHx52h9M49551z2gnHHS2QI4JQogaCAjREdbwkNEPRXN8AG0sE0QqVaYPq8z7eiqjadkeR5ov5AOtk7X28l42obWLIyvKYn7wegaiVnaXM2tcx3tUYLy69EvWGX+o9F/JolOvyNAvZBUiJdhfnKwg/dvhDmZdvJ8YD0Fx+0oOwK9/xozRmya432/sbaqog75H6DA0g2xtQXKy+YdeX73uuwW3F2ldufN7Q3e2O/714RB05Y4bAimrl1YlcDNiUe5k4P/lhYsFEXuFKi7OlckbXyEJeA9WwmnrKN7iSg61a/yWsrxUkHiw+MpQpchsgeFViYNBHRVej5aKi1UZrY+HqUhHVzpXkr9bHz4jq4ozMwPMlPe8nzI6Tg7722++avmfUt62Ik4tde/6pXeO+bxJFJTQWVCmFsf72XZ67R0oVulajjfzylWZns3BIkaOrdimvjqpYFVE+OBFyz1XsdmldsFyUctHTi42dwj7aRny0Dn8c+iPjWbenvL0c5bJChB54HNXAXwGReYPUssWOgt8qk+QrvDjV+jh8aZ15pXZpWjeeoVwEgZ/KSA4CIkOg9OK2frF/4maIqKBqIUmx1BaYHkmnDxr/o7CFRoGOgRlFg0J7UU0xpwRmorNESKvM6tiEQKH6glSlxqaZMGXDvBGrukyYgdNNW1dmybxxOqB03SjnVVzq9AAAAAA=) format('woff2')}
+text{font-kerning:none;text-rendering:geometricPrecision}
+.vivo{animation:vivo 2.4s ease-in-out infinite}
+@keyframes vivo{0%,100%{opacity:1}50%{opacity:.35}}
+.estatico{display:none}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important}
+  .animado{display:none}
+  .estatico{display:inline}
+}
+.seta{animation:seta 3.6s ease-in-out infinite}@keyframes seta{0%,72%,100%{transform:translate(0,0)}82%{transform:translate(2.5px,-2.5px)}}</style><rect x="1" y="1" width="157" height="50" rx="25" fill="#f6f6f1" stroke="#050505" stroke-width="1.5"/><text x="28.00" y="31.50" font-family="SG" font-weight="700" font-size="16" letter-spacing="-0.320" fill="#050505" text-anchor="start">Abrir demo</text><path class="seta" d="M121.04 31.00 L131.04 21.00 M124.04 21.00 L131.04 21.00 L131.04 24.00" fill="none" stroke="#050505" stroke-width="1.8" stroke-linecap="square"/></svg>

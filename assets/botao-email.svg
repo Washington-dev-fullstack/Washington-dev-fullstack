@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 123 52" width="123" height="52" role="img" aria-label="E-mail"><title>E-mail</title><style>@font-face{font-family:SG;font-weight:700;src:url(data:font/woff2;base64,d09GMgABAAAAAALsABAAAAAABUAAAAKUAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhwbIBwqBmA/U1RBVCoAXBEICoMsgmcBNgIkAygLFgAEIAVMByAMBxvPAyCeA27TfIpX1ES0Ha6kZbzzR6hTEJUu69nVueSVfGaWHwj1CJwBUIiAGUP0R8Tc7heGsDCQbqliqM1YTcWfuFkDuyyM9sQEuywKZE2QrYsSHv/Cfy/w9/nPWbju9Ec4XCyFJMwDSS8UcIIXPlACbS1ty08aiaS7skeSxKhuet02COACAIIigCCAIAhgSJNB6vlN22JjAYQAgAAGTyFKogsO7TV2OElCxLZUujpBANRc1RFo0mqkO2WSC0PhA/0mwBkgyzD95P/Cmi55gADIm3ECyKIRBBsB4giQRk0YMHCsACgEQCx1AgAFaCCORoA4Fg2BIDaKMLIUV59eDGJYCCsY6tHPx92ze1cCZgkSYgOCASAO2MBUYAkALuACACCoEDHDLXAsz3ItJxCBi6/Qbu6jR5n1+PFyZNYpM/dEmrfp/uM17yHMRBzM3FMiZvmOK+37xyJm7hFm3k7AsRzt4Ky77cy7WRzZHuLhQ8roG+2Zqh0kgh558azTzryTzLwc7ag6J85NdDfnFDk76xW8Rsu3ySvlly1bql77nEqz08gTpdRnvWLvYHPfq9V7VK9uRzPwQgPb5v+8Elv10Mn0sHydKqXNjNxpqalL8E9Mv/C/NU7MlQO6/c+5nz5KY69Y82r+9OqFV3vim7I0DqPuxYgbzcTCOR/zqI855PM86jn+t+4HTI9wIAzbxQYoBx5B1+43AijYsbyLDSKr/T5g/Q7w/CBWgLeE/QCvfxhT10AYCgCB35T1QgE4HQQm8zjeg/+oItRRdfBiKBeDr9vjyx7qAYVWTghgKEMRRZ2K4JoiNGKFlyCMRMAl+CQLmxSt6ccAxjGUXoymA/0YxAAGMpY6jGAofdEAEFoZlEfAUK+1AA==) format('woff2')}
+text{font-kerning:none;text-rendering:geometricPrecision}
+.vivo{animation:vivo 2.4s ease-in-out infinite}
+@keyframes vivo{0%,100%{opacity:1}50%{opacity:.35}}
+.estatico{display:none}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important}
+  .animado{display:none}
+  .estatico{display:inline}
+}
+.seta{animation:seta 3.6s ease-in-out infinite}@keyframes seta{0%,72%,100%{transform:translate(0,0)}82%{transform:translate(2.5px,-2.5px)}}</style><rect x="1" y="1" width="121" height="50" rx="25" fill="#050505" stroke="rgba(246,246,241,0.28)" stroke-width="1.5"/><text x="28.00" y="31.50" font-family="SG" font-weight="700" font-size="16" letter-spacing="-0.320" fill="#f6f6f1" text-anchor="start">E-mail</text><path class="seta" d="M85.28 31.00 L95.28 21.00 M88.28 21.00 L95.28 21.00 L95.28 24.00" fill="none" stroke="#f6f6f1" stroke-width="1.8" stroke-linecap="square"/></svg>

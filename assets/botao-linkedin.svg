@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 141 52" width="141" height="52" role="img" aria-label="LinkedIn"><title>LinkedIn</title><style>@font-face{font-family:SG;font-weight:700;src:url(data:font/woff2;base64,d09GMgABAAAAAAMIABAAAAAABXwAAAKtAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhwbIBwqBmA/U1RBVCoAZBEICoNcgwsBNgIkAywLGAAEIAVMByAMBxv/AyCeh7Ex7akPvEOtkdqIy54OHtCu/iUzp8mejQ+gcgd1Rgm4lbAEue34TiG0zEjWqmaTzAG0aP8DwLbOf87CgXPqWjhbbIjROG/ADXCIo2m+QQoP1sATOx/imgyuocURr6UeBgGYAACJRGKBwAprBAIw8OFHlJTVtGCNDmAGAAjAIEwEiXSzGzto6ng8QJDTuvSVR1mAXBAdQHXaRfSRlIJxs+A5yqqBkwQYr938fxf0WSIEEADiuTwKAmgIBNYIwIUAfMgZI0ZOFQCSAVD3SjFDDLjQbtZpABw40IAAldQwjFGMYbwZUMSGrmt+5JADNlhrjVUJ/FcEwgx7QKAAcAMGMB/YBZgA04gAiTRz97Ru6W7nZWXrZtKVhVpn2TJowbouxNx9Qy18DnkqTemGMHaMtoW70buMBQPmXOPuN6+BaeNUC1/v1hX9apda9xkLurJQUrWrllajzUBpCrUar6ShzWX2DehfcIm5t1p4Mueo1WTR0eMocUdJwUxsbbOHZ+VOanRolJuGZeXEnu1fXixmHa05Tqos1ndcVm1VhVFRU5WdW/odhOeqiXl5k+tMdbmTJ+RVVY4pyJ5cEz3KqTw/JdX3yvDUWzXtUUfzXmadSUzeQ9nRNr9s3r/l6Ye35k0763SOso+10OlQYVxxVltKfE9exCy/jBHJWfk1pX/NjAx6ExLyJij4jsV32GdtH1mGYQCW2JiQACnguryc+xABSNjt86u33z7nm7WmvQS4syZoJcCLoNSrRPyfI0NeBiyRAAj4eYm2BADS2t87Vs2hfv6DsKZI+gV8FnFRuDcZpEQKZXIkZUBEaa0yBKAIJXEgr/PUqBFFQ+g2qR0cFQJM2P0lHWu8NDGMEUxjLIOYTDvDGMUIRjKVIiYwlqFoAGC+JN48KMxdXwwAAAA=) format('woff2')}
+text{font-kerning:none;text-rendering:geometricPrecision}
+.vivo{animation:vivo 2.4s ease-in-out infinite}
+@keyframes vivo{0%,100%{opacity:1}50%{opacity:.35}}
+.estatico{display:none}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important}
+  .animado{display:none}
+  .estatico{display:inline}
+}
+.seta{animation:seta 3.6s ease-in-out infinite}@keyframes seta{0%,72%,100%{transform:translate(0,0)}82%{transform:translate(2.5px,-2.5px)}}</style><rect x="1" y="1" width="139" height="50" rx="25" fill="#050505" stroke="rgba(246,246,241,0.28)" stroke-width="1.5"/><text x="28.00" y="31.50" font-family="SG" font-weight="700" font-size="16" letter-spacing="-0.320" fill="#f6f6f1" text-anchor="start">LinkedIn</text><path class="seta" d="M102.77 31.00 L112.77 21.00 M105.77 21.00 L112.77 21.00 L112.77 24.00" fill="none" stroke="#f6f6f1" stroke-width="1.8" stroke-linecap="square"/></svg>
