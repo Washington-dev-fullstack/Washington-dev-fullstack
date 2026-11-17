@@ -1,34 +1,31 @@
-# Perfil do GitHub — como publicar e manter
+# Perfil do GitHub — como manter
 
-Esta pasta é o repositório especial **`Washington-dev-fullstack/Washington-dev-fullstack`**: o `README.md` dele aparece no topo do perfil.
+Esta pasta é o clone do repositório especial **`Washington-dev-fullstack/Washington-dev-fullstack`**: o `README.md` dele aparece no topo do perfil. Para publicar uma mudança, faça commit e push na `main`.
 
-## Publicar (primeira vez)
-
-O repositório já existe no GitHub, só com o README padrão ("Hi there 👋"). Para trocar pelo novo:
-
-1. Clone o repositório e copie para dentro dele o conteúdo desta pasta: `README.md`, `assets/`, `ferramentas/`, `.github/` e `docs/`. Este `LEIA-ME.md` também pode ir.
-2. Faça commit e push na `main`.
-3. Na aba **Actions** do repositório, abra "Contribuições" e clique em **Run workflow**. A partir daí o gráfico se refaz sozinho todo dia às 03:17.
-   - Se a Action falhar com erro de permissão: **Settings → Actions → General → Workflow permissions → Read and write**.
-   - Opcional: crie um token pessoal (classic, sem escopos) e salve como secret `CONTRIB_TOKEN`. Assim o gráfico também conta as contribuições privadas.
+A Action "Contribuições" refaz o gráfico sozinha todo dia às 03:17 (e a cada push que mexa em `ferramentas/`). Se ela falhar com erro de permissão: **Settings → Actions → General → Workflow permissions → Read and write**. Opcional: um token pessoal (classic, sem escopos) salvo como secret `CONTRIB_TOKEN` faz o gráfico contar também as contribuições privadas.
 
 ## Mudar textos ou visual
 
-Tudo sai de dois scripts, que usam as mesmas cores e fontes do portfólio (`ferramentas/identidade.py`):
+Tudo sai de scripts que dividem as mesmas cores e a mesma fonte (`ferramentas/identidade.py`):
 
 ```bash
-pip install fonttools brotli pillow
-python ferramentas/gerar.py            # capa, projeto, contato, rodapé e botões
+pip install fonttools brotli pillow numpy
+python ferramentas/gerar.py            # nome, projeto, contato, rodapé e botões
+python ferramentas/gerar.py capa.svg   # só um deles
 python ferramentas/contribuicoes.py    # gráfico (sem token, lê a página pública)
 python -m unittest discover -s ferramentas/testes
 ```
 
+- `fios.py` tece os fios (o nome e "Me chama."); `luz.py` faz os pulsos de luz e as divisórias.
 - Para trocar as telas do Gemóvel, substitua os PNGs de `ferramentas/capturas/` (1600 × 1000, com a faixa "Demonstração" no topo) e rode o `gerar.py`.
-- **Quando o portfólio for lançado:** troque o rodapé ("Portfólio completo — em breve", vazado) por um botão "Ver portfólio" sólido. Vazado é o que ainda não foi entregue; quando sair, ele fica sólido.
+- **Quando o portfólio for lançado:** troque o rodapé ("Portfólio completo chegando em breve.") por um botão âmbar "Ver portfólio" com o link do site.
 
-## Regras do sistema
+## Regras do sistema ("Fios de luz")
 
-- Vazado = rascunho / futuro. Sólido = entregue. Verde = só o que está ao vivo (disponível, demo no ar, hoje no gráfico, o cursor).
-- Animações só com `transform` e `opacity` (e `fill-opacity` no preenchimento das palavras). Sem filtro nem desfoque.
-- Com "reduzir movimento" ativado no sistema, cada SVG mostra o estado final, parado.
-- Fontes: Space Grotesk e JetBrains Mono (SIL Open Font License), embutidas só com as letras usadas.
+- Identidade própria do perfil, de propósito diferente do portfólio: fundo noite azulado, Syne, fios e luz âmbar.
+- Fio é a forma de tudo: o nome é tecido; divisórias e a moldura da tela são fios.
+- Âmbar = luz: só o que se move ou está ao vivo (pulsos, "disponível", hoje no gráfico, o botão principal).
+- Sem numeração de seção nem etiquetas em letra mono (dão cara de modelo pronto). Um teste confere.
+- Animações só com `transform`, `opacity` e `stroke-dashoffset`. Sem filtro nem desfoque.
+- Com "reduzir movimento" ativado no sistema, cada SVG mostra um quadro parado.
+- Fonte: Syne (SIL Open Font License, `ferramentas/fontes/LICENSE-syne.txt`), embutida só com as letras usadas.

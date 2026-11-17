@@ -1,4 +1,4 @@
-"""Testes do gráfico de contribuições.  Rode: python -m unittest discover -s ferramentas/testes -t ferramentas"""
+"""Testes do gráfico de contribuições.  Rode: python -m unittest discover -s ferramentas/testes"""
 import sys
 import unittest
 import xml.etree.ElementTree as ET
@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from contribuicoes import estatisticas, ler_html, montar_svg, nivel  # noqa: E402
+from contribuicoes import estatisticas, ler_html, montar_svg, nivel, suave  # noqa: E402
 
 
 def ano(contagens: dict[int, int], hoje=date(2026, 11, 17)):
@@ -54,18 +54,29 @@ class Html(unittest.TestCase):
 
 
 class Svg(unittest.TestCase):
-    def test_svg_valido_com_um_quadrado_por_dia(self):
-        conteudo = montar_svg(ano({0: 2, 5: 1, 40: 9}))
+    def test_svg_valido_com_um_ponto_por_dia_parado(self):
+        dias = ano({0: 2, 5: 1, 40: 9})
+        conteudo = montar_svg(dias)
         raiz = ET.fromstring(conteudo)
         self.assertTrue(raiz.tag.endswith("svg"))
         self.assertIn("prefers-reduced-motion", conteudo)
-        # 364 dias no caminho vazado + hoje à parte
-        caminho = [e for e in raiz.iter() if e.tag.endswith("path") and "fill" in e.attrib and e.get("fill") == "none"][0]
-        self.assertEqual(caminho.get("d").count("Z"), 364)
+        # 365 dias, 3 com contribuição; hoje fica à parte → 362 pontinhos
+        vazios = [e for e in raiz.iter() if e.get("id") == "vazios"][0]
+        self.assertEqual(vazios.get("d").count("z"), 362)
 
-    def test_hoje_vazio_fica_verde_vazado(self):
-        conteudo = montar_svg(ano({3: 1}))
-        self.assertIn('fill="none" stroke="#00ff66"', conteudo)
+    def test_hoje_vazio_fica_so_com_contorno(self):
+        raiz = ET.fromstring(montar_svg(ano({3: 1})))
+        hoje = [e for e in raiz.iter() if e.get("id") == "hoje"][0]
+        self.assertEqual(hoje.get("fill"), "none")
+
+    def test_hoje_com_contribuicao_fica_aceso(self):
+        raiz = ET.fromstring(montar_svg(ano({0: 4})))
+        hoje = [e for e in raiz.iter() if e.get("id") == "hoje"][0]
+        self.assertNotEqual(hoje.get("fill"), "none")
+
+    def test_curva_das_semanas_nao_afunda_abaixo_de_zero(self):
+        pontos = [(0, 100), (10, 100), (20, 40), (30, 100), (40, 100)]  # y cresce para baixo; 100 = zero
+        self.assertLessEqual(max(y for _, y in suave(pontos)), 100 + 1e-9)
 
     def test_ano_sem_contribuicoes_nao_quebra(self):
         ET.fromstring(montar_svg(ano({})))

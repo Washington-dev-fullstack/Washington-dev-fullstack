@@ -35,20 +35,28 @@ class SvgsGerados(unittest.TestCase):
                 externos = re.findall(r'(?:href|src)="(?!data:|#)([^"]+)"', s) + re.findall(r"url\((?!data:|#)", s)
                 self.assertEqual(externos, [])
 
+    def test_sem_numeracao_de_secao(self):
+        """Nada de "01 / Sobre": numerar seções dá cara de modelo pronto."""
+        for a in self.arquivos:
+            with self.subTest(a.name):
+                textos = re.findall(r"<text[^>]*>([^<]*)</text>", a.read_text(encoding="utf-8"))
+                self.assertEqual([x for x in textos if re.match(r"\s*0\d\b", x)], [])
+
     def test_reduzir_movimento(self):
         for a in self.arquivos:
             with self.subTest(a.name):
                 self.assertIn("prefers-reduced-motion:reduce", a.read_text(encoding="utf-8"))
 
-    def test_so_anima_transform_e_opacity(self):
-        """Animação leve: nada de filtro, desfoque ou propriedade que force layout."""
+    def test_so_anima_propriedades_leves(self):
+        """Animação leve: transform, opacity e o deslocamento do traço (só repinta o fio).
+        Nada de filtro, desfoque ou propriedade que force layout."""
         for a in self.arquivos:
             with self.subTest(a.name):
                 s = a.read_text(encoding="utf-8")
                 self.assertNotIn("filter", s)
                 for quadro in re.findall(r"@keyframes \w+\{(.*?\}\})", s):
                     props = set(re.findall(r"([a-z-]+):", quadro))
-                    self.assertLessEqual(props, {"transform", "opacity", "fill-opacity"}, a.name)
+                    self.assertLessEqual(props, {"transform", "opacity", "fill-opacity", "stroke-dashoffset"}, a.name)
 
 
 if __name__ == "__main__":

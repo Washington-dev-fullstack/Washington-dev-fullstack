@@ -1,489 +1,388 @@
-"""Gera os SVGs fixos do README (capa, projeto, contato, rodapé e botões).
+"""Gera os SVGs fixos do README (nome, projeto, contato, rodapé e botões).
 
-Uso:  python ferramentas/gerar.py
+Uso:  python ferramentas/gerar.py            (todos)
+      python ferramentas/gerar.py capa.svg   (só os citados)
 O gráfico de contribuições é gerado à parte, todo dia, por contribuicoes.py.
 
-Animação leve: só transform e opacity (CSS) e, onde é preciso sincronizar
-recortes, SMIL. Nada de filtro ou desfoque. Com "reduzir movimento", cada SVG
-mostra o estado final, parado (.animado some, .estatico aparece).
+Animação leve: transform, opacity e o deslocamento do traço (stroke-dashoffset,
+que só repinta o fio). Recortes que precisam andar juntos usam SMIL. Nada de
+filtro ou desfoque. Com "reduzir movimento", cada SVG mostra um quadro parado
+(.animado some, .estatico aparece).
 """
 from __future__ import annotations
 
 import base64
 import io
+import math
+import random
 from pathlib import Path
 
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image
 
+import fios as F
+from luz import CSS_DESENHA, VELOCIDADE, camadas_cometa, cometas, fio_divisor
 from identidade import (
-    EASE_RENDER, INK, INK_2, LARGURA as W, LINE, LINE_STRONG, LOGO_BARRAS, MARGEM as M, PAPER,
-    PAPER_INK, SIGNAL, SPLINE_RENDER, TEXT, TEXT_2, TEXT_3, VAZADO, Textos, altura_maiuscula,
-    esc, medir, ponto_vivo, quebrar, salvar, seta, svg,
+    AMBAR, AMBAR_CLARO, CORAL, EASE_SAIDA, FIO, FIO_FORTE, LARGURA as W, MARGEM as M, NOITE, NOITE_2,
+    SPLINE_SAIDA, SPLINE_SUAVE, TEXTO, TEXTO_2, TEXTO_3, Textos, altura_maiuscula, medir, ponto_vivo, salvar,
+    seta, svg,
 )
 
 PASTA = Path(__file__).resolve().parent
 CAPTURAS = PASTA / "capturas"
-CAP = altura_maiuscula("SG", 700)
-CONTEUDO = W - 2 * M  # 800
+CONTEUDO = W - 2 * M
 
-LINK_DEMO = "https://washington-dev-fullstack.github.io/gemovel-integrative-project/"
-
-
-def tamanho_para(texto: str, largura: float, peso: int = 700, espaco_em: float = -0.05) -> float:
-    """Tamanho de fonte para o texto ocupar exatamente a largura (sem a folga final)."""
-    um = medir(texto, 1, "SG", peso, espaco_em) - espaco_em
-    return largura / um
+CSS_ENTRA = (f".entra{{animation:entra 1s {EASE_SAIDA} both}}"
+             "@keyframes entra{from{opacity:0;transform:translateY(8px)}}"
+             "@keyframes aparece{from{opacity:0}}")
 
 
-def letras(t: Textos, texto: str, x0: float, y: float, tamanho: float, *, vazado: bool, classe: str = "",
-           atraso0: float = 0.0, passo: float = 0.0, espaco_em: float = -0.05) -> str:
-    """Uma <text> por letra, posicionadas pela medição (permite a entrada letra a letra)."""
-    t.usar(texto, "SG", 700)
-    pintura = (f'fill="none" stroke="{VAZADO}" stroke-width="1.5"' if vazado else f'fill="{TEXT}"')
-    partes, x = [], x0
-    for i, c in enumerate(texto):
-        estilo = f' style="animation-delay:{atraso0 + i * passo:.3f}s"' if classe else ""
-        cls = f' class="{classe}"' if classe else ""
-        partes.append(f'<text x="{x:.2f}" y="{y:.2f}" font-family="SG" font-weight="700" '
-                      f'font-size="{tamanho:.2f}" {pintura}{cls}{estilo}>{esc(c)}</text>')
-        x += medir(c, tamanho, "SG", 700, espaco_em)
-    return "".join(partes)
+def entra(atraso: float) -> str:
+    """Classe + atraso da entrada padrão (sobe 8px e aparece)."""
+    return f' class="entra" style="animation-delay:{atraso:.2f}s"'
 
 
-def palavras(t: Textos, linhas: list[str], x0: float, y0: float, tamanho: float, altura_linha: float, *,
-             peso: int, espaco_em: float, classe: str, atraso0: float, passo: float) -> tuple[str, float]:
-    """Uma <text> por palavra (para o preenchimento palavra a palavra). Devolve (svg, y final)."""
-    partes, i, y = [], 0, y0
-    espaco = medir(" ", tamanho, "SG", peso, espaco_em)
-    for linha in linhas:
-        x = x0
-        for p in linha.split():
-            t.usar(p, "SG", peso)
-            partes.append(
-                f'<text x="{x:.2f}" y="{y:.2f}" font-family="SG" font-weight="{peso}" font-size="{tamanho}" '
-                f'letter-spacing="{espaco_em * tamanho:.3f}" class="{classe}" '
-                f'style="animation-delay:{atraso0 + i * passo:.2f}s">{esc(p)}</text>')
-            x += medir(p, tamanho, "SG", peso, espaco_em) + espaco
-            i += 1
-        y += altura_linha
-    return "".join(partes), y - altura_linha
+def tecido(linhas: list[F.Linha], altura: float, rnd: random.Random, *, caixa_letras: tuple[float, float, float, float],
+           n_pulsos: int = 26, dsep: float = 2.5, inicio: float = 0.25, duracao: float = 2.4,
+           brilho: tuple[float, float] | None = None) -> tuple[str, str]:
+    """Texto tecido por fios: o vento (fios de fora, quase invisíveis), o texto (fios
+    densos dentro das letras, que chegam numa frente ondulada) e pulsos de luz que
+    acendem ao atravessar as letras. Devolve (svg, css)."""
+    css = []
+    campo = F.Campo()
+    m = F.mascara(linhas, W, altura)
+    dentro_letras = F.dentro_da_mascara(m)
+    fios_dentro = F.tecer(campo, dentro_letras, caixa_letras, dsep, passo=0.6, borda_exata=True, comprimento_min=1.5)
+    fios_fora = F.tecer(campo, lambda x, y: -30 <= x <= W + 30 and -10 <= y <= altura + 10,
+                        (-30, -10, W + 30, altura + 10), 9.0, passo=1.2, comprimento_min=40, semente=3)
+
+    # os fios de fora que mais atravessam letras levam os pulsos de luz
+    def dentro_px(fio: F.Fio) -> float:
+        return sum(1 for p in fio if dentro_letras(*p)) * 1.2
+    candidatos = sorted(fios_fora, key=dentro_px, reverse=True)
+    pulsos = [f for f in candidatos[:n_pulsos * 2 + 8] if dentro_px(f) > 30]
+    rnd.shuffle(pulsos)
+    pulsos = pulsos[:n_pulsos]
+
+    dentro_txt = F.caminho(F.enxugar(f, 0.1) for f in fios_dentro)
+    fora_txt = F.caminho(F.enxugar(f, 0.15) for f in fios_fora)
+    # o traço da luz pode ser mais enxuto que o fio: 0,3 px de desvio não se vê sob um traço de 1 px
+    lista_p, css_p = cometas([F.enxugar(f, 0.3) for f in pulsos], rnd, prefixo="p")
+    css.append(css_p)
+
+    x_l0, _, x_l1, _ = caixa_letras
+    corpo = ["<defs>"]
+    if brilho:
+        corpo.append(f'<radialGradient id="brilho" cx="{brilho[0]:.0f}" cy="{brilho[1]:.0f}" r="460" gradientUnits="userSpaceOnUse">'
+                     f'<stop offset="0" stop-color="{AMBAR}" stop-opacity=".10"/>'
+                     f'<stop offset="1" stop-color="{AMBAR}" stop-opacity="0"/></radialGradient>')
+    corpo.append(
+        f'<linearGradient id="tinta" x1="{x_l0:.0f}" x2="{x_l1:.0f}" y1="0" y2="0" gradientUnits="userSpaceOnUse">'
+        f'<stop offset="0" stop-color="#ffd38f"/><stop offset=".55" stop-color="{AMBAR}"/><stop offset="1" stop-color="{CORAL}"/></linearGradient>'
+        f'<clipPath id="letras">{F.contornos(linhas)}</clipPath>'
+        f'<path id="dentro" d="{dentro_txt}"/></defs>')
+    if brilho:
+        corpo.append(f'<rect width="{W}" height="{altura}" fill="url(#brilho)"/>')
+
+    # vento: os fios de fora, quase invisíveis
+    corpo.append(f'<g class="vento" fill="none" stroke="{TEXTO}" stroke-width="1" stroke-opacity=".085">'
+                 f'<path d="{fora_txt}"/></g>')
+    css.append(".vento{animation:aparece 2.4s ease-out .1s both}")
+
+    # um véu âmbar bem leve dentro das letras: o texto se lê mesmo onde os fios rareiam
+    corpo.append(f'<rect width="{W}" height="{altura}" fill="{AMBAR}" fill-opacity=".06" clip-path="url(#letras)"/>')
+
+    # o texto tecido chega com uma frente de vento ondulada, da esquerda, que acende os fios ao passar
+    def onda(y: float) -> float:
+        return 26 * math.sin(y * 0.045 + 1.2) + 12 * math.sin(y * 0.11)
+    ys = [i * 8 for i in range(int(altura) // 8 + 2)]
+    largo = W + 160
+    frente = " ".join(f"{onda(y):.1f},{y}" for y in ys)
+    varre = f"-{largo},0 {frente} -{largo},{ys[-1]}"
+    faixa = (frente + " " + " ".join(f"{onda(y) - 90:.1f},{y}" for y in reversed(ys)))
+    ida = f"-40 0;{largo} 0"
+    tempo = (f'dur="{duracao}s" begin="{inicio}s" fill="freeze" calcMode="spline" keyTimes="0;1" '
+             f'keySplines="{SPLINE_SUAVE}"')
+    corpo.append(
+        '<g class="animado">'
+        f'<clipPath id="varre"><polygon points="{varre}" transform="translate(-40 0)">'
+        f'<animateTransform attributeName="transform" type="translate" values="{ida}" {tempo}/></polygon></clipPath>'
+        f'<clipPath id="faixa"><polygon points="{faixa}" transform="translate(-40 0)">'
+        f'<animateTransform attributeName="transform" type="translate" values="{ida}" {tempo}/></polygon></clipPath>'
+        '<use href="#dentro" clip-path="url(#varre)" fill="none" stroke="url(#tinta)" stroke-width="1" stroke-opacity=".9"/>'
+        f'<use href="#dentro" clip-path="url(#faixa)" fill="none" stroke="{AMBAR_CLARO}" stroke-width="1.3"/>'
+        "</g>"
+        '<use class="estatico" href="#dentro" fill="none" stroke="url(#tinta)" stroke-width="1" stroke-opacity=".9"/>'
+    )
+
+    # pulsos: um rastro fraco no vento; ao atravessar as letras, a luz acende (halo + rastro + ponta)
+    fora = camadas_cometa("p", lista_p, [
+        ("cauda", f'stroke="{AMBAR}" stroke-opacity=".22" stroke-width="1.2"'),
+        ("cabeca", f'stroke="{AMBAR}" stroke-opacity=".6" stroke-width="1.4"'),
+    ])
+    dentro = camadas_cometa("p", lista_p, [
+        ("cauda", f'stroke="{AMBAR}" stroke-opacity=".16" stroke-width="7"'),
+        ("cauda", f'stroke="{AMBAR_CLARO}" stroke-opacity=".6" stroke-width="1.6"'),
+        ("cabeca", 'stroke="#fff6e6" stroke-width="2.2"'),
+    ])
+    corpo.append(f'<g class="pulsos" fill="none" stroke-linecap="round">{fora}'
+                 f'<g clip-path="url(#letras)">{dentro}</g></g>')
+    css.append(f".pulsos{{animation:aparece 1.2s ease-out {inicio + duracao - 0.4:.2f}s both}}")
+    return "".join(corpo), "".join(css)
 
 
-def paragrafo(t: Textos, texto: str, x: float, y: float, largura: float, tamanho: float, altura_linha: float,
-              cor: str = TEXT_2, peso: int = 400, classe: str = "", extra: str = "") -> tuple[str, float]:
-    linhas = quebrar(texto, largura, tamanho, "SG", peso)
-    partes = [t.texto(x, y + i * altura_linha, l, tamanho=tamanho, peso=peso, cor=cor, classe=classe, extra=extra)
-              for i, l in enumerate(linhas)]
-    return "".join(partes), y + (len(linhas) - 1) * altura_linha
-
-
-def linha_cabeca(t: Textos, y: float, esquerda: str, direita: str = "", vivo: bool = False, classe: str = "") -> str:
-    """Rótulo de seção (mono, text-3) à esquerda e anotação à direita, com o ponto verde se ao vivo."""
-    partes = [t.mono(M, y, esquerda, classe=classe)]
-    if direita:
-        partes.append(t.mono(W - M, y, direita, ancora="end", classe=classe))
-        if vivo:
-            largura = medir(direita.upper(), 12, "JB", 400, 0.06)
-            partes.append(ponto_vivo(W - M - largura - 12, y - 4))
-    return "".join(partes)
-
-
-# ================================================================ CAPA
-CODIGO_LENTE = [
-    '<section id="inicio" class="hero">',
-    '  <h1 class="hero-nome" aria-label="Washington Gabriel">',
-    '    <span class="hero-linha vazado">Washington</span>',
-    '    <span class="hero-linha">Gabriel</span>',
-    '  </h1>',
-    '  <p class="hero-frase">Full stack aprendiz.</p>',
-    '</section>',
-    '',
-    '/* vazado = rascunho · sólido = entregue */',
-    '.hero-nome {',
-    "  font: 700 var(--fs-mega)/0.86 'Space Grotesk';",
-    '  letter-spacing: -0.05em;',
-    '}',
-    '.vazado { color: transparent; -webkit-text-stroke: 1.5px; }',
-    '.camada-fonte { clip-path: circle(var(--r) at var(--x) var(--y)); }',
-    'gsap.from(nome.chars, { yPercent: 110, stagger: 0.03 });',
-]
-
-
+# ================================================================ NOME
 def capa() -> str:
     t = Textos()
-    css, corpo = [], []
+    rnd = random.Random(11)
+    peso = 700
+    tam = CONTEUDO / medir("WASHINGTON", 1, peso)
+    cap = altura_maiuscula(peso) * tam
+    y1 = 76 + cap
+    y2 = y1 + 0.84 * tam
+    altura = round(y2 + 82)
+    linhas = [("WASHINGTON", M, y1, tam, peso, 0.0), ("GABRIEL", M, y2, tam, peso, 0.0)]
 
-    # ---------- hero
-    F = tamanho_para("WASHINGTON", CONTEUDO)
-    y_nome_topo = 112
-    y1 = y_nome_topo + CAP * F
-    y2 = y1 + 0.86 * F
-    subida = CAP * F * 1.18
-    y_base = y2 + 58
-    alt_hero = y_base + 74
+    trama, css = tecido(linhas, altura, rnd, caixa_letras=(M - 4, y1 - cap - 4, W - M + 4, y2 + 4),
+                        brilho=(W * 0.42, (y1 + y2) / 2 - cap / 2))
+    corpo = [trama]
 
-    # grade de 12 colunas que "desenha" de cima para baixo
-    for i in range(13):
-        x = M + i * CONTEUDO / 12
-        corpo.append(f'<line class="grade" x1="{x:.2f}" y1="0" x2="{x:.2f}" y2="{alt_hero:.0f}" '
-                     f'style="animation-delay:{i * 0.04:.2f}s"/>')
-    css.append(f".grade{{stroke:rgba(246,246,241,.055);stroke-width:1;transform-box:fill-box;transform-origin:top;"
-               f"animation:grade 1.6s {EASE_RENDER} both}}@keyframes grade{{from{{transform:scaleY(0)}}}}")
+    # ao lado de GABRIEL: quem é, e o status
+    x = M + medir("GABRIEL", tam, peso) + 44
+    topo = y2 - cap
+    corpo.append(t.texto(x, topo + 17, "Desenvolvedor full stack", tamanho=20, peso=600, extra=entra(1.6)))
+    corpo.append(t.texto(x, topo + 41, "em formação, de Hortolândia (SP).", tamanho=16, cor=TEXTO_2, extra=entra(1.7)))
+    corpo.append(f'<g{entra(1.85)}>{ponto_vivo(x + 4, y2 - 5)}'
+                 f'{t.texto(x + 17, y2, "Disponível para trabalho", tamanho=15, peso=500, cor=TEXTO_2)}</g>')
 
-    # logo: o W digitado barra a barra, com o cursor verde andando (como o preloader)
-    tempos = [0.15 + i * 0.14 for i in range(4)]
-    barras = "".join(f'<polygon class="barra" points="{p}" style="animation-delay:{tempos[i]:.2f}s"/>'
-                     for i, p in enumerate(LOGO_BARRAS))
-    corpo.append(f'<g transform="translate({M - 2} 22) scale(0.72)" fill="{TEXT}">{barras}'
-                 f'<rect class="cursor-logo" x="53" y="33" width="8" height="13" fill="{SIGNAL}"/></g>')
-    dur = 0.8
-    pct = [f"{tm / dur * 100:.2f}%" for tm in tempos]
-    css.append(
-        ".barra{animation:aparece .01s linear both}@keyframes aparece{from{opacity:0}}"
-        f".cursor-logo{{animation:cursorlogo {dur}s step-end both,pisca 1.06s step-end {dur + 0.4:.2f}s infinite}}"
-        f"@keyframes cursorlogo{{0%{{transform:translateX(-49.5px)}}{pct[0]}{{transform:translateX(-38.3px)}}"
-        f"{pct[1]}{{transform:translateX(-26.3px)}}{pct[2]}{{transform:translateX(-14.3px)}}"
-        f"{pct[3]},100%{{transform:translateX(0)}}}}"
-        "@keyframes pisca{0%{opacity:1}50%{opacity:0}}"
-    )
-
-    css.append(f".entra{{animation:entra 1s {EASE_RENDER} both}}"
-               "@keyframes entra{from{opacity:0;transform:translateY(10px)}}")
-    corpo.append(t.mono(M + 56, 50, "Portfólio / 2026", classe="entra", extra=' style="animation-delay:.9s"'))
-    corpo.append(f'<g class="entra" style="animation-delay:1s">'
-                 f'{linha_cabeca(t, 50, "", "Disponível para trabalho", vivo=True)}</g>')
-
-    # nome: WASHINGTON vazado (rascunho) e GABRIEL sólido (entregue), subindo letra a letra
-    for n, (palavra, y, vaz, atraso) in enumerate([("WASHINGTON", y1, True, 0.35), ("GABRIEL", y2, False, 0.55)]):
-        topo = y - CAP * F - 0.1 * F
-        corpo.append(f'<clipPath id="janela{n}"><rect x="0" y="{topo:.2f}" width="{W}" height="{CAP * F + 0.2 * F:.2f}"/></clipPath>')
-        corpo.append(f'<g clip-path="url(#janela{n})">'
-                     f'{letras(t, palavra, M, y, F, vazado=vaz, classe="letra", atraso0=atraso, passo=0.03)}</g>')
-    css.append(f".letra{{animation:sobe 1.1s {EASE_RENDER} both}}"
-               f"@keyframes sobe{{from{{transform:translateY({subida:.1f}px)}}}}")
-
-    # a lente: um círculo que passeia pelo nome e mostra o "código" por trás, com os estados invertidos
-    caminho = "M230,215 C340,120 580,130 690,200 C790,265 640,330 470,300 C300,272 110,300 230,215 Z"
-    movimento = f'<animateMotion path="{caminho}" dur="22s" repeatCount="indefinite"/>'
-    abre = (f'<animate attributeName="r" values="0;78" keyTimes="0;1" calcMode="spline" keySplines="{SPLINE_RENDER}" '
-            f'begin="2.3s" dur="1.1s" fill="freeze"/>')
-    # o código cobre toda a área do nome: duas colunas, a segunda começando no meio do bloco
-    metade = len(CODIGO_LENTE) // 2
-    codigo = "".join(
-        t.texto(x, 104 + i * 15.5, CODIGO_LENTE[(i + desloc) % len(CODIGO_LENTE)], tamanho=10.5, familia="JB",
-                peso=400, cor="rgba(246,246,241,.45)")
-        for x, desloc in ((M, 0), (M + 410, metade))
-        for i in range(len(CODIGO_LENTE) + 2) if CODIGO_LENTE[(i + desloc) % len(CODIGO_LENTE)]
-    )
-    inverso = (letras(t, "WASHINGTON", M, y1, F, vazado=False) + letras(t, "GABRIEL", M, y2, F, vazado=True))
-    corpo.append(
-        f'<g class="animado"><clipPath id="lente"><circle r="0">{abre}{movimento}</circle></clipPath>'
-        f'<g clip-path="url(#lente)"><rect x="0" y="80" width="{W}" height="{y2 - 40:.0f}" fill="{INK_2}"/>'
-        f'{codigo}{inverso}</g>'
-        f'<circle r="0" fill="none" stroke="{LINE_STRONG}" stroke-width="1">{abre}{movimento}</circle></g>'
-    )
-
-    # base do hero: a frase e a localização
-    frase, _ = paragrafo(t, "Full stack aprendiz. Crio interfaces que respondem, se movem e têm presença.",
-                         M, y_base, 390, 17, 25, classe="entra", extra=' style="animation-delay:1.15s"')
-    corpo.append(frase)
-    corpo.append(t.mono(W - M, y_base, "Hortolândia, SP — Brasil", ancora="end", classe="entra",
-                        extra=' style="animation-delay:1.25s"'))
-    corpo.append(t.mono(W - M, y_base + 22, "Full-stack developer in training", ancora="end", cor=TEXT_2, classe="entra",
-                        extra=' style="animation-delay:1.35s"'))
-
-    # ---------- sobre: o manifesto se preenche palavra por palavra
-    y = alt_hero + 34
-    corpo.append(f'<line class="risco" x1="{M}" y1="{alt_hero:.1f}" x2="{W - M}" y2="{alt_hero:.1f}" stroke="{LINE}"/>')
-    css.append(f".risco{{transform-box:fill-box;transform-origin:left;animation:risco 1.4s {EASE_RENDER} 1.4s both}}"
-               "@keyframes risco{from{transform:scaleX(0)}}")
-    corpo.append(linha_cabeca(t, y + 22, "01 / Sobre", "Manifesto"))
-    manifesto = ("Eu não faço páginas que parecem template. Construo experiências onde design e código são a "
-                 "mesma decisão — e cada detalhe tem um motivo.")
-    tam = 35
-    linhas = quebrar(manifesto, CONTEUDO, tam, "SG", 500, -0.035)
-    trecho, y_fim = palavras(t, linhas, M, y + 84, tam, tam * 1.14, peso=500, espaco_em=-0.035,
-                             classe="palavra", atraso0=2.0, passo=0.09)
-    corpo.append(trecho)
-    css.append(f".palavra{{fill:{TEXT};stroke:rgba(246,246,241,.38);stroke-width:1;"
-               "animation:preenche 15s ease-in-out infinite both}"
-               "@keyframes preenche{0%{fill-opacity:0}4%{fill-opacity:1}86%{fill-opacity:1}92%,100%{fill-opacity:0}}")
-
-    # os três pilares
-    y = y_fim + 62
-    col = (CONTEUDO - 2 * 28) / 3
-    pilares = [
-        ("01", "Base técnica", "Técnico em Informática integrado ao Ensino Médio na UNASP Hortolândia (2025–2027)."),
-        ("02", "Curiosidade aplicada", "Python, DevArte, inglês e IA como ferramenta. Testar, quebrar, ajustar e publicar."),
-        ("03", "Direção visual", "Interfaces com presença: interações que respondem a quem usa e layouts que respiram."),
-    ]
-    y_max = y
-    for i, (num, titulo, texto) in enumerate(pilares):
-        x = M + i * (col + 28)
-        atraso = 2.2 + i * 0.12
-        corpo.append(f'<line class="risco" x1="{x:.1f}" y1="{y:.1f}" x2="{x + col:.1f}" y2="{y:.1f}" '
-                     f'stroke="{LINE_STRONG}" style="animation-delay:{atraso:.2f}s"/>')
-        corpo.append(t.mono(x, y + 26, num))
-        corpo.append(t.texto(x, y + 58, titulo, tamanho=20, peso=500, espaco_em=-0.03))
-        par, yf = paragrafo(t, texto, x, y + 86, col - 8, 13.5, 20.5)
-        corpo.append(par)
-        y_max = max(y_max, yf)
-
-    # ---------- faixa creme: a matéria-prima, inclinada, palavras alternando sólidas e vazadas
-    y_faixa = y_max + 64
-    alt_faixa = 118
-    itens = ["HTML", "CSS", "JavaScript", "PHP", "MySQL", "Python", "Flask", "POO", "GSAP", "UX/UI", "C++"]
-    tam_m = 62
-    folga = 52
-    base_m = y_faixa + alt_faixa / 2 + CAP * tam_m / 2
-    partes_m, x = [], 0.0
-    for _ in range(2):
-        for i, item in enumerate(itens):
-            rotulo = item.upper()
-            t.usar(rotulo, "SG", 700)
-            pintura = (f'fill="none" stroke="rgba(11,11,11,.55)" stroke-width="1.2"' if i % 2 else f'fill="{PAPER_INK}"')
-            partes_m.append(f'<text x="{x:.2f}" y="{base_m:.2f}" font-family="SG" font-weight="700" font-size="{tam_m}" '
-                            f'letter-spacing="{-0.05 * tam_m:.2f}" {pintura}>{esc(rotulo)}</text>')
-            x += medir(rotulo, tam_m, "SG", 700, -0.05) + folga
-    volta = x / 2
-    corpo.append(
-        f'<g transform="rotate(-1.2 {W / 2} {y_faixa + alt_faixa / 2:.1f})">'
-        f'<rect x="-80" y="{y_faixa:.1f}" width="{W + 160}" height="{alt_faixa}" fill="{PAPER}"/>'
-        f'<g class="trilho">{"".join(partes_m)}</g></g>'
-    )
-    css.append(f".trilho{{animation:trilho 34s linear infinite}}"
-               f"@keyframes trilho{{to{{transform:translateX(-{volta:.2f}px)}}}}")
-
-    altura = y_faixa + alt_faixa + 46
-    return svg(W, round(altura), "".join(corpo), t, "".join(css),
-               titulo="Washington Gabriel — full stack aprendiz. Portfólio / 2026, disponível para trabalho.")
+    return svg(W, altura, "".join(corpo), t, CSS_ENTRA + css,
+               titulo="Washington Gabriel — desenvolvedor full stack em formação, de Hortolândia (SP). "
+                      "Disponível para trabalho.")
 
 
 # ================================================================ PROJETO
-def _imagem(nome: str, recorte_topo: int = 52, largura: int = 1100, rascunho: bool = False) -> str:
+def _imagem(nome: str, largura: int = 1100, recorte_topo: int = 52) -> str:
     """Captura da demo → webp em data URI (o SVG como imagem só aceita imagens embutidas)."""
     img = Image.open(CAPTURAS / f"{nome}.png").convert("RGB")
     img = img.crop((0, recorte_topo, img.width, img.height))  # tira a faixa "Demonstração"
     img = img.resize((largura, round(largura * img.height / img.width)), Image.LANCZOS)
-    if rascunho:
-        img = ImageOps.grayscale(img).convert("RGB")
-        img = ImageEnhance.Contrast(img).enhance(0.55)
-        img = ImageEnhance.Brightness(img).enhance(0.62)
     saida = io.BytesIO()
-    img.save(saida, "WEBP", quality=70 if rascunho else 78, method=6)
+    img.save(saida, "WEBP", quality=76, method=6)
     return "data:image/webp;base64," + base64.b64encode(saida.getvalue()).decode()
+
+
+def _smil(atributo: str, quadros: list[tuple[float, str]], D: float, *, suaves: set[int] = frozenset(),
+          tipo: str = "", inicio: float = 0.6) -> str:
+    """Animação SMIL em laço a partir de (segundo, valor). Os trechos em `suaves`
+    (índice do quadro onde o trecho começa) usam a curva de saída; o resto é linear."""
+    tempos = ";".join(f"{s / D:.4f}" for s, _ in quadros)
+    valores = ";".join(v for _, v in quadros)
+    curvas = ";".join(SPLINE_SAIDA if i in suaves else "0 0 1 1" for i in range(len(quadros) - 1))
+    elemento = "animateTransform" if tipo else "animate"
+    extra = f' type="{tipo}"' if tipo else ""
+    return (f'<{elemento} attributeName="{atributo}"{extra} values="{valores}" keyTimes="{tempos}" '
+            f'calcMode="spline" keySplines="{curvas}" dur="{D}s" begin="{inicio}s" repeatCount="indefinite"/>')
 
 
 def projeto() -> str:
     t = Textos()
-    css, corpo = [], []
-    altura = 482
-    corpo.append(f'<rect width="{W}" height="{altura}" fill="rgba(166,244,255,0.04)"/>')  # tom do projeto, como no site
-    corpo.append(linha_cabeca(t, 50, "02 / Projeto em destaque", "Ao vivo · GitHub Pages", vivo=True))
+    rnd = random.Random(5)
+    css, corpo = [CSS_ENTRA, CSS_DESENHA], []
 
-    # moldura: o print nasce rascunho e "renderiza" num corte diagonal
-    fx, fy, fw = 330.0, 84.0, 510.0
+    # cabeçalho
+    corpo.append(t.texto(M, 58, "Projeto em destaque", tamanho=15, peso=500, cor=TEXTO_3))
+    status = "No ar no GitHub Pages"
+    largura_status = medir(status, 15, 500)
+    corpo.append(ponto_vivo(W - M - largura_status - 13, 53))
+    corpo.append(t.texto(W - M, 58, status, tamanho=15, peso=500, cor=TEXTO_2, ancora="end"))
+    corpo.append(t.texto(M - 2, 120, "Gemóvel", tamanho=54, peso=700))
+    desc = ("Gestão de imóveis de aluguel por temporada: reservas, hóspedes, agenda e as tarefas de limpeza e "
+            "manutenção da equipe. Painel do administrador no computador e app da equipe no celular.")
+    par, y = t.paragrafo(desc, M, 160, CONTEUDO, 16, 25)
+    corpo.append(par)
+
+    # a tela: Visão geral por baixo; a Agenda entra tecida, faixa por faixa, e sai do mesmo jeito
+    fx, fy, fw = float(M), y + 38, float(CONTEUDO)
     fh = fw * 948 / 1600
-    s = 70  # inclinação do corte "/"
+    r = 12
     corpo.append(
         "<defs>"
-        f'<image id="r0" x="{fx}" y="{fy}" width="{fw}" height="{fh:.2f}" preserveAspectRatio="xMidYMid slice" href="{_imagem("visao-geral", rascunho=True)}"/>'
-        f'<image id="r1" x="{fx}" y="{fy}" width="{fw}" height="{fh:.2f}" preserveAspectRatio="xMidYMid slice" href="{_imagem("visao-geral")}"/>'
-        f'<image id="r2" x="{fx}" y="{fy}" width="{fw}" height="{fh:.2f}" preserveAspectRatio="xMidYMid slice" href="{_imagem("agenda")}"/>'
-        f'<clipPath id="moldura"><rect x="{fx}" y="{fy}" width="{fw}" height="{fh:.2f}"/></clipPath>'
+        f'<image id="i0" x="{fx}" y="{fy:.2f}" width="{fw}" height="{fh:.2f}" preserveAspectRatio="xMidYMid slice" href="{_imagem("visao-geral")}"/>'
+        f'<image id="i1" x="{fx}" y="{fy:.2f}" width="{fw}" height="{fh:.2f}" preserveAspectRatio="xMidYMid slice" href="{_imagem("agenda")}"/>'
+        f'<clipPath id="tela"><rect x="{fx}" y="{fy:.2f}" width="{fw}" height="{fh:.2f}" rx="{r}"/></clipPath>'
         "</defs>"
     )
-    grade = "".join(f'<line x1="{fx + i * fw / 12:.2f}" y1="{fy}" x2="{fx + i * fw / 12:.2f}" y2="{fy + fh:.2f}"/>'
-                    for i in range(1, 12))
-    grade += "".join(f'<line x1="{fx}" y1="{fy + i * fh / 6:.2f}" x2="{fx + fw}" y2="{fy + i * fh / 6:.2f}"/>'
-                     for i in range(1, 6))
-
-    D = 16.0  # ciclo: rascunho → visão geral → agenda → volta ao rascunho
-    def kt(*segundos):  # segundos → keyTimes
-        return ";".join(f"{x / D:.4f}" for x in segundos)
-    escondido = f"{-(fw + s):.1f} 0"
-
-    def corte(id_, entra, sai_fim=D):
-        """Polígono com a borda direita em "/" que atravessa a moldura."""
-        poly = (f"{fx - fw - 2 * s:.1f},{fy - 2} {fx + fw + s:.1f},{fy - 2} {fx + fw:.1f},{fy + fh + 2:.1f} "
-                f"{fx - fw - 2 * s:.1f},{fy + fh + 2:.1f}")
-        anim = (f'<animateTransform attributeName="transform" type="translate" '
-                f'values="{escondido};{escondido};0 0;0 0" keyTimes="{kt(0, entra, entra + 1.3, sai_fim)}" '
-                f'calcMode="spline" keySplines="0 0 1 1;{SPLINE_RENDER};0 0 1 1" dur="{D}s" begin="0.8s" repeatCount="indefinite"/>')
-        borda = (f'<line x1="{fx + fw + s:.1f}" y1="{fy:.1f}" x2="{fx + fw:.1f}" y2="{fy + fh:.1f}" stroke="{SIGNAL}" stroke-width="2" opacity="0" transform="translate({escondido})">'
-                 f'{anim}<animate attributeName="opacity" values="0;0;1;1;0;0" '
-                 f'keyTimes="{kt(0, entra - 0.01, entra, entra + 1.0, entra + 1.3, D)}" dur="{D}s" begin="0.8s" repeatCount="indefinite"/></line>')
-        return f'<clipPath id="{id_}"><polygon points="{poly}" transform="translate({escondido})">{anim}</polygon></clipPath>', borda
-
-    c1, b1 = corte("corte1", 0.0)
-    c2, b2 = corte("corte2", 7.0)
-    some = (f'<animate attributeName="opacity" values="1;1;0;0" keyTimes="{kt(0, 14.4, 15.3, D)}" '
-            f'dur="{D}s" begin="0.8s" repeatCount="indefinite"/>')
+    n, D, mov, passo = 16, 14.0, 0.9, 0.045
+    a0, b0 = 5.0, 11.8
+    h = fh / n
+    faixas, lancadeiras = [], []
+    eps = 0.02
+    for i in range(n):
+        a, b = a0 + i * passo, b0 + i * passo
+        yi = fy + i * h
+        faixas.append(
+            f'<rect x="{fx}" y="{yi:.2f}" width="{fw}" height="{h + 0.6:.2f}" transform="translate({-fw} 0)">'
+            + _smil("transform", [(0, f"{-fw} 0"), (a, f"{-fw} 0"), (a + mov, "0 0"), (b, "0 0"),
+                                  (b + mov, f"{fw} 0"), (D, f"{fw} 0")], D, suaves={1, 3}, tipo="translate")
+            + "</rect>")
+        # a "lançadeira": um fio de luz na borda da faixa enquanto ela corre
+        lancadeiras.append(
+            f'<line x1="{fx}" y1="{yi:.2f}" x2="{fx}" y2="{yi + h:.2f}" opacity="0">'
+            + _smil("transform", [(0, "0 0"), (a, "0 0"), (a + mov, f"{fw} 0"), (a + mov + eps, "0 0"), (b, "0 0"),
+                                  (b + mov, f"{fw} 0"), (b + mov + eps, "0 0"), (D, "0 0")], D, suaves={1, 4},
+                    tipo="translate")
+            + _smil("opacity", [(0, "0"), (a - eps, "0"), (a, "1"), (a + mov * 0.7, "1"), (a + mov, "0"),
+                                (b - eps, "0"), (b, "1"), (b + mov * 0.7, "1"), (b + mov, "0"), (D, "0")], D)
+            + "</line>")
     corpo.append(
-        f'<rect x="{fx - 1}" y="{fy - 1}" width="{fw + 2}" height="{fh + 2:.2f}" fill="{INK_2}" stroke="{LINE}"/>'
-        f'<use href="#r0"/>'
-        f'<g stroke="rgba(246,246,241,.07)" stroke-width="1">{grade}</g>'
-        f'<g class="animado">{c1}{c2}<g>{some}'
-        f'<g clip-path="url(#corte1)"><use href="#r1"/></g>'
-        f'<g clip-path="url(#corte2)"><use href="#r2"/></g></g>'
-        f'<g clip-path="url(#moldura)">{b1}{b2}</g></g>'
-        f'<g class="estatico"><use href="#r1"/></g>'
+        f'<rect x="{fx - 1}" y="{fy - 1:.2f}" width="{fw + 2}" height="{fh + 2:.2f}" rx="{r + 1}" fill="{NOITE_2}"/>'
+        f'<g clip-path="url(#tela)"><use href="#i0"/>'
+        f'<g class="animado"><clipPath id="trama">{"".join(faixas)}</clipPath>'
+        f'<use href="#i1" clip-path="url(#trama)"/>'
+        f'<g stroke="{AMBAR_CLARO}" stroke-width="2">{"".join(lancadeiras)}</g></g></g>'
     )
-    corpo.append(t.mono(fx + fw, fy - 10, "1600 × 948", tamanho=10, ancora="end", cor=TEXT_3,
-                        classe="medida"))
-    css.append(".medida{animation:medida 16s linear .8s infinite both}"
-               "@keyframes medida{0%,4%{opacity:1}6%,92%{opacity:0}96%,100%{opacity:1}}")
 
-    # legendas que trocam junto com a tela
-    yl = fy + fh + 28
-    legendas = [("Fig. 00 — Rascunho", "1;1;0;0;1;1", (0, 0.9, 1.3, 15.2, 15.6, D)),
-                ("Fig. 01 — Visão geral", "0;0;1;1;0;0", (0, 0.9, 1.3, 7.4, 7.8, D)),
-                ("Fig. 02 — Agenda", "0;0;1;1;0;0", (0, 7.4, 7.8, 15.2, 15.6, D))]
-    for texto, valores, tempos in legendas:
-        anim = (f'<animate attributeName="opacity" values="{valores}" keyTimes="{kt(*tempos)}" '
-                f'dur="{D}s" begin="0.8s" repeatCount="indefinite"/>')
-        t.usar(texto.upper(), "JB", 400)
-        corpo.append(f'<g class="animado" opacity="{valores.split(";")[0]}">{t.mono(fx, yl, texto)}{anim}</g>')
-    corpo.append(t.mono(fx, yl, "Fig. 01 — Visão geral", classe="estatico"))
-    corpo.append(t.mono(fx + fw, yl, "Demo pública · contas de exemplo", ancora="end"))
-
-    # informações do projeto
-    tam_num = 96
-    y_num = fy + CAP * tam_num
-    t.usar("01", "SG", 700)
+    # a moldura é um fio: a luz dá a volta na tela, devagar
+    k = 0.5523 * r  # aproximação do arco por Bézier
+    x0, y0, x1, y1 = fx, fy, fx + fw, fy + fh
+    contorno = (f"M{x0 + r:.1f} {y0:.1f}H{x1 - r:.1f}C{x1 - r + k:.1f} {y0:.1f} {x1:.1f} {y0 + r - k:.1f} {x1:.1f} {y0 + r:.1f}"
+                f"V{y1 - r:.1f}C{x1:.1f} {y1 - r + k:.1f} {x1 - r + k:.1f} {y1:.1f} {x1 - r:.1f} {y1:.1f}"
+                f"H{x0 + r:.1f}C{x0 + r - k:.1f} {y1:.1f} {x0:.1f} {y1 - r + k:.1f} {x0:.1f} {y1 - r:.1f}"
+                f"V{y0 + r:.1f}C{x0:.1f} {y0 + r - k:.1f} {x0 + r - k:.1f} {y0:.1f} {x0 + r:.1f} {y0:.1f}Z")
+    perimetro = 2 * (fw + fh) - (8 - 2 * math.pi) * r
+    cauda, cabeca = 260 / perimetro * 1000, 50 / perimetro * 1000
     corpo.append(
-        '<linearGradient id="prisma" x1="0" y1="0" x2="1" y2="1">'
-        '<stop offset="0" stop-color="#a6f4ff"/><stop offset=".38" stop-color="#cdbcff"/>'
-        '<stop offset=".7" stop-color="#ffb8e3"/><stop offset="1" stop-color="#ffe2a6"/></linearGradient>'
-        f'<text x="{M - 4}" y="{y_num:.2f}" font-family="SG" font-weight="700" font-size="{tam_num}" '
-        f'letter-spacing="{-0.05 * tam_num:.2f}" fill="none" stroke="url(#prisma)" stroke-width="1.3">01</text>'
+        f'<path d="{contorno}" fill="none" stroke="{FIO_FORTE}"/>'
+        f'<g class="volta" fill="none" stroke-linecap="round">'
+        f'<path d="{contorno}" pathLength="1000" stroke="{AMBAR}" stroke-opacity=".45" stroke-width="1.4" '
+        f'stroke-dasharray="0 {1000 - cauda:.1f} {cauda:.1f} 0"/>'
+        f'<path d="{contorno}" pathLength="1000" stroke="{AMBAR_CLARO}" stroke-width="2" '
+        f'stroke-dasharray="0 {1000 - cabeca:.1f} {cabeca:.1f} 0"/></g>'
     )
-    y = y_num + 54
-    corpo.append(t.texto(M, y, "Gemóvel", tamanho=42, peso=700, espaco_em=-0.04))
-    desc = ("Gestão de imóveis de aluguel por temporada: reservas, hóspedes, agenda e as tarefas de limpeza "
-            "e manutenção da equipe. Painel do administrador no computador e app da equipe no celular.")
-    par, y = paragrafo(t, desc, M, y + 34, 262, 14, 21)
-    corpo.append(par)
-    y += 30
+    css.append(f".volta{{stroke-dashoffset:-180;animation:corre {perimetro / VELOCIDADE:.2f}s linear infinite}}"
+               "@keyframes corre{from{stroke-dashoffset:0}to{stroke-dashoffset:-1000}}")
+
+    # legenda que troca junto com a tela
+    yl = fy + fh + 32
+    for texto, quadros in (
+        ("Visão geral", [(0, "1"), (a0 + 0.2, "1"), (a0 + 0.6, "0"), (b0 + 0.5, "0"), (b0 + 0.9, "1"), (D, "1")]),
+        ("Agenda", [(0, "0"), (a0 + 0.5, "0"), (a0 + 0.9, "1"), (b0 + 0.2, "1"), (b0 + 0.6, "0"), (D, "0")]),
+    ):
+        corpo.append(f'<g class="animado" opacity="{quadros[0][1]}">'
+                     f'<line x1="{M}" y1="{yl - 5}" x2="{M + 18}" y2="{yl - 5}" stroke="{AMBAR}" stroke-width="1.5"/>'
+                     f'{t.texto(M + 28, yl, texto, tamanho=15, peso=500, cor=TEXTO_2)}{_smil("opacity", quadros, D)}</g>')
+    corpo.append(f'<g class="estatico"><line x1="{M}" y1="{yl - 5}" x2="{M + 18}" y2="{yl - 5}" stroke="{AMBAR}" '
+                 f'stroke-width="1.5"/>{t.texto(M + 28, yl, "Visão geral", tamanho=15, peso=500, cor=TEXTO_2)}</g>')
+    corpo.append(t.texto(W - M, yl, "Demo pública, com contas de exemplo", tamanho=15, cor=TEXTO_3, ancora="end"))
+
+    # ficha, sob uma divisória de fio
+    y = yl + 42
+    divisor, css_div = fio_divisor(y, rnd, prefixo="d", atraso=0.4)
+    corpo.append(divisor)
+    css.append(css_div)
     ficha = [("Ano", "2026"), ("Tipo", "Sistema web"), ("Stack", "Python · Flask · MySQL · JS"),
              ("Equipe", "Em dupla com Arthur Gazzoli")]
-    for i, (dt, dd) in enumerate(ficha):
-        yy = y + i * 25
-        corpo.append(f'<line x1="{M}" y1="{yy - 16:.1f}" x2="{M + 262}" y2="{yy - 16:.1f}" stroke="{LINE}"/>')
-        corpo.append(t.mono(M, yy, dt, tamanho=10.5))
-        corpo.append(t.mono(M + 64, yy, dd, tamanho=10.5, cor=TEXT))
+    colunas = [M, M + 122, M + 282, W - M - medir(ficha[3][1], 16, 500)]
+    for x, (rotulo, valor) in zip(colunas, ficha):
+        corpo.append(t.texto(x, y + 38, rotulo, tamanho=13, peso=500, cor=TEXTO_3))
+        corpo.append(t.texto(x, y + 62, valor, tamanho=16, peso=500))
+    altura = round(y + 96)
 
     return svg(W, altura, "".join(corpo), t, "".join(css),
-               titulo="Projeto em destaque: Gemóvel, sistema de gestão de imóveis de temporada (Python, Flask, MySQL, JS), feito em dupla.")
+               titulo="Projeto em destaque: Gemóvel, gestão de imóveis de aluguel por temporada, no ar no GitHub Pages. "
+                      "2026, Python, Flask, MySQL e JavaScript, em dupla com Arthur Gazzoli.")
 
 
 # ================================================================ BOTÕES
-def botao(rotulo: str, primario: bool = False, com_seta: bool = True) -> str:
-    """Pílula como os botões do site. Escura no contorno, creme na principal (borda preta
-    para não sumir no tema claro do GitHub)."""
+def botao(rotulo: str, primario: bool = False) -> str:
+    """Pílula. A principal é âmbar (a luz); as outras são um fio sobre a noite."""
     t = Textos()
     tam = 16
-    largura_txt = medir(rotulo, tam, "SG", 700, -0.02)
-    largura = round(largura_txt + 56 + (22 if com_seta else 0))
+    largura_txt = medir(rotulo, tam, 700)
+    largura = round(largura_txt + 56 + 22)
     altura = 52
-    fundo, borda, cor = (TEXT, INK, INK) if primario else (INK, LINE_STRONG, TEXT)
-    corpo = [f'<rect x="1" y="1" width="{largura - 2}" height="{altura - 2}" rx="25" fill="{fundo}" stroke="{borda}" stroke-width="1.5"/>',
-             t.texto(28, 31.5, rotulo, tamanho=tam, peso=700, cor=cor, espaco_em=-0.02)]
-    css = ""
-    if com_seta:
-        corpo.append(seta(28 + largura_txt + 12, 31, 10, cor, 1.8, classe="seta"))
-        css = (".seta{animation:seta 3.6s ease-in-out infinite}"
-               "@keyframes seta{0%,72%,100%{transform:translate(0,0)}82%{transform:translate(2.5px,-2.5px)}}")
+    fundo, borda, cor = (AMBAR, AMBAR, NOITE) if primario else (NOITE, FIO_FORTE, TEXTO)
+    corpo = [f'<rect x="1" y="1" width="{largura - 2}" height="{altura - 2}" rx="25" fill="{fundo}" '
+             f'stroke="{borda}" stroke-width="1.5"/>',
+             t.texto(28, 31.5, rotulo, tamanho=tam, peso=700, cor=cor),
+             seta(28 + largura_txt + 12, 31, 10, cor, 1.8, classe="seta")]
+    css = (".seta{animation:seta 3.6s ease-in-out infinite}"
+           "@keyframes seta{0%,72%,100%{transform:translate(0,0)}82%{transform:translate(2.5px,-2.5px)}}")
     return svg(largura, altura, "".join(corpo), t, css, titulo=rotulo, fundo=None)
 
 
 # ================================================================ CONTATO
 def contato() -> str:
     t = Textos()
-    css, corpo = [], []
-    corpo.append(linha_cabeca(t, 50, "04 / Contato", "Respondo rápido"))
-    tam = 58
-    linhas = ["Vamos construir", "algo com presença?"]
-    t.usar("".join(linhas), "SG", 700)
-    trecho, y = palavras(t, linhas, M - 2, 84 + CAP * tam, tam, tam * 0.98, peso=700, espaco_em=-0.05,
-                         classe="final", atraso0=0.6, passo=0.11)
-    corpo.append(trecho)
-    css.append(f".final{{fill:{TEXT};stroke:{VAZADO};stroke-width:1.2;animation:preenche 12s ease-in-out infinite both}}"
-               "@keyframes preenche{0%{fill-opacity:0}5%{fill-opacity:1}84%{fill-opacity:1}91%,100%{fill-opacity:0}}")
-    par, y = paragrafo(t, "Estou em busca da minha primeira oportunidade. Me chama — respondo rápido.",
-                       M, y + 50, 420, 17, 25)
-    corpo.append(par)
-    y += 52
-    corpo.append(t.texto(M, y, "coyotisr@gmail.com", tamanho=26, peso=500, espaco_em=-0.03))
-    largura_email = medir("coyotisr@gmail.com", 26, "SG", 500, -0.03)
-    corpo.append(f'<line class="sublinha" x1="{M}" y1="{y + 10}" x2="{M + largura_email:.1f}" y2="{y + 10}" stroke="{LINE_STRONG}"/>')
-    css.append(f".sublinha{{transform-box:fill-box;transform-origin:left;animation:sublinha 1.2s {EASE_RENDER} 1s both}}"
-               "@keyframes sublinha{from{transform:scaleX(0)}}")
-    corpo.append(ponto_vivo(W - M - medir("DISPONÍVEL PARA TRABALHO", 12, "JB", 400, 0.06) - 12, y - 4))
-    corpo.append(t.mono(W - M, y, "Disponível para trabalho", ancora="end", cor=TEXT_2))
-    corpo.append(t.mono(W - M, y - 22, "Hortolândia, SP · UTC−3", ancora="end"))
-    altura = round(y + 44)
-    return svg(W, altura, "".join(corpo), t, "".join(css),
-               titulo="Contato: coyotisr@gmail.com — disponível para trabalho, Hortolândia, SP.")
+    rnd = random.Random(23)
+    peso = 700
+    frase = "Me chama."
+    tam = 118
+    cap = altura_maiuscula(peso) * tam
+    y_frase = 98 + cap
+    y_div = y_frase + 54
+    altura = round(y_div + 118)
+    linhas = [(frase, M - 4, y_frase, tam, peso, 0.0)]
+
+    corpo = [t.texto(M, 64, "Tem uma vaga ou uma ideia?", tamanho=30, peso=600, extra=entra(0.2))]
+    trama, css = tecido(linhas, altura, rnd, caixa_letras=(M - 8, y_frase - tam, M + medir(frase, tam, peso) + 4, y_frase + 4),
+                        n_pulsos=14, inicio=0.5, duracao=2.0, brilho=(W * 0.35, y_frase - cap / 2))
+    corpo.insert(0, trama)
+
+    divisor, css_div = fio_divisor(y_div, rnd, prefixo="d", atraso=1.2)
+    corpo.append(divisor)
+    y = y_div + 56
+    corpo.append(t.texto(M, y, "coyotisr@gmail.com", tamanho=28, peso=600, extra=entra(1.5)))
+    corpo.append(t.texto(M, y + 32, "Estou em busca da minha primeira oportunidade. Respondo rápido.",
+                         tamanho=16, cor=TEXTO_2, extra=entra(1.6)))
+    status = "Disponível para trabalho"
+    corpo.append(f'<g{entra(1.7)}>{ponto_vivo(W - M - medir(status, 15, 500) - 13, y - 5)}'
+                 f'{t.texto(W - M, y, status, tamanho=15, peso=500, cor=TEXTO_2, ancora="end")}</g>')
+    corpo.append(t.texto(W - M, y + 32, "Hortolândia, SP · UTC−3", tamanho=15, cor=TEXTO_3, ancora="end", extra=entra(1.8)))
+
+    return svg(W, altura, "".join(corpo), t, CSS_ENTRA + CSS_DESENHA + css + css_div,
+               titulo="Tem uma vaga ou uma ideia? Me chama. E-mail: coyotisr@gmail.com. "
+                      "Disponível para trabalho, Hortolândia (SP).")
 
 
 # ================================================================ RODAPÉ
 def rodape() -> str:
     t = Textos()
-    css, corpo = [], []
-    corpo.append(t.mono(M, 54, "Próxima versão"))
-    tam = 44
-    frase = "Portfólio completo — em breve"
-    t.usar(frase, "SG", 700)
-    y = 70 + CAP * tam
-    corpo.append(f'<text x="{M - 1}" y="{y:.1f}" font-family="SG" font-weight="700" font-size="{tam}" '
-                 f'letter-spacing="{-0.04 * tam:.2f}" fill="none" stroke="{VAZADO}" stroke-width="1.2">{esc(frase)}</text>')
-    largura = medir(frase, tam, "SG", 700, -0.04)
-    corpo.append(f'<rect class="cursor" x="{M + largura + 8:.1f}" y="{y - CAP * tam:.1f}" width="14" height="{CAP * tam:.1f}" fill="{SIGNAL}"/>')
-    css.append(".cursor{animation:pisca 1.06s step-end infinite}@keyframes pisca{0%{opacity:1}50%{opacity:0}}")
-
-    # assinatura: o nome inteiro, atravessado por uma luz (como o rodapé do site)
-    nome = "WASHINGTON GABRIEL"
-    F = tamanho_para(nome, CONTEUDO)
-    y_nome = y + 58 + CAP * F
-    t.usar(nome, "SG", 700)
-    texto_nome = (f'<text x="{M}" y="{y_nome:.2f}" font-family="SG" font-weight="700" font-size="{F:.2f}" '
-                  f'letter-spacing="{-0.05 * F:.2f}">{nome}</text>')
-    topo = y_nome - CAP * F
-    corpo.append(
-        f'<clipPath id="nome">{texto_nome}</clipPath>'
-        '<linearGradient id="luz" x1="0" x2="1"><stop offset="0" stop-color="#f6f6f1" stop-opacity="0"/>'
-        '<stop offset=".5" stop-color="#f6f6f1"/><stop offset="1" stop-color="#f6f6f1" stop-opacity="0"/></linearGradient>'
-        f'<g clip-path="url(#nome)" class="animado"><rect x="0" y="{topo - 4:.1f}" width="{W}" height="{CAP * F + 8:.1f}" fill="rgba(246,246,241,.2)"/>'
-        f'<g transform="skewX(-22)"><rect class="luz" x="0" y="{topo - 4:.1f}" width="300" height="{CAP * F + 8:.1f}" fill="url(#luz)"/></g></g>'
-        f'<g class="estatico" fill="{TEXT}">{texto_nome}</g>'
-    )
-    css.append(".luz{animation:luz 7s cubic-bezier(0.65,0,0.35,1) 1s infinite both}"
-               "@keyframes luz{0%{transform:translateX(-360px)}55%,100%{transform:translateX(1200px)}}")
-    y_base = y_nome + 50
-    corpo.append(f'<line x1="{M}" y1="{y_base - 24:.1f}" x2="{W - M}" y2="{y_base - 24:.1f}" stroke="{LINE}"/>')
-    corpo.append(t.mono(M, y_base, "© 2026 Washington Gabriel"))
-    corpo.append(t.mono(W - M, y_base, "Feito à mão com SVG e CSS", ancora="end"))
-    return svg(W, round(y_base + 30), "".join(corpo), t, "".join(css),
-               titulo="Portfólio completo: em breve. Washington Gabriel.")
+    rnd = random.Random(31)
+    altura = 112
+    corpo, css = [], [CSS_DESENHA]
+    # o vento do topo volta aqui, mais ralo: a bio fecha com os mesmos fios com que abre
+    vento = F.tecer(F.Campo(), lambda x, y: -30 <= x <= W + 30 and -10 <= y <= altura + 10,
+                    (-30, -10, W + 30, altura + 10), 11.0, passo=1.2, comprimento_min=40, semente=9)
+    corpo.append(f'<path d="{F.caminho(F.enxugar(f, 0.15) for f in vento)}" fill="none" stroke="{TEXTO}" '
+                 f'stroke-opacity=".06"/>')
+    divisor, css_div = fio_divisor(42, rnd, prefixo="d", atraso=0.2)
+    corpo.append(divisor)
+    css.append(css_div)
+    corpo.append(t.texto(M, 82, "Portfólio completo chegando em breve.", tamanho=17, peso=600, cor=TEXTO_2))
+    corpo.append(t.texto(W - M, 82, "© 2026 Washington Gabriel", tamanho=15, cor=TEXTO_3, ancora="end"))
+    return svg(W, altura, "".join(corpo), t, "".join(css),
+               titulo="Portfólio completo chegando em breve. © 2026 Washington Gabriel.")
 
 
-def main():
+def main(apenas: set[str] | None = None):
     arquivos = {
-        "capa.svg": capa(),
-        "projeto.svg": projeto(),
-        "contato.svg": contato(),
-        "rodape.svg": rodape(),
-        "botao-demo.svg": botao("Abrir demo", primario=True),
-        "botao-codigo.svg": botao("Ver código"),
-        "botao-email.svg": botao("E-mail"),
-        "botao-linkedin.svg": botao("LinkedIn"),
-        "botao-whatsapp.svg": botao("WhatsApp"),
+        "capa.svg": capa,
+        "projeto.svg": projeto,
+        "contato.svg": contato,
+        "rodape.svg": rodape,
+        "botao-demo.svg": lambda: botao("Abrir o Gemóvel", primario=True),
+        "botao-codigo.svg": lambda: botao("Ver o código"),
+        "botao-email.svg": lambda: botao("E-mail", primario=True),
+        "botao-linkedin.svg": lambda: botao("LinkedIn"),
+        "botao-whatsapp.svg": lambda: botao("WhatsApp"),
     }
-    for nome, conteudo in arquivos.items():
-        caminho = salvar(nome, conteudo)
+    for nome, gerar in arquivos.items():
+        if apenas and nome not in apenas:
+            continue
+        caminho = salvar(nome, gerar())
         print(f"{nome:22} {caminho.stat().st_size / 1024:7.1f} KB")
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main(set(sys.argv[1:]) or None)

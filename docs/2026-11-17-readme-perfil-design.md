@@ -1,43 +1,45 @@
-# README do perfil do GitHub — design
+# README do perfil do GitHub — design "Fios de luz"
 
-**Data:** 2026-11-17 · **Status:** aprovado na conversa
+**Data:** 2026-11-17 · **Status:** direção escolhida na conversa; versão final aguarda a aprovação do Washington antes do commit.
+Substitui a primeira versão, que repetia a identidade do portfólio ("Código → Render").
 
 ## Intenção
-O perfil do GitHub (Washington-dev-fullstack) é visitado por recrutadores. Ele deve parecer uma extensão do portfólio "Código → Render": mesmo preto, mesma tipografia, mesmas regras (vazado = rascunho/futuro, sólido = entregue, verde = ao vivo). Enquanto o portfólio não é lançado, o README leva o recrutador ao **Gemóvel** (GitHub Pages) e ao **contato**.
+O perfil é visitado por recrutadores. A primeira versão recriava o portfólio e por isso parecia menos criativa. Esta tem **identidade própria**: o nome é tecido por fios finos, como fibra óptica, e a luz âmbar corre por eles. Enquanto o portfólio não sai, o README leva o recrutador ao **Gemóvel** (GitHub Pages) e ao **contato**.
 
 ## Metas
-- Visual, imersivo e animado, no nível de acabamento do portfólio.
-- Animações leves e o mais fluidas possível: só `transform` e `opacity`, sem filtros/desfoque.
-- Gráfico de contribuições próprio, no estilo do portfólio.
+- Abrir com o nome num efeito bonito e vivo, no nível do efeito em canvas do rodapé do portfólio, mas diferente dele.
+- Manter o gráfico de contribuições (a parte de que o Washington gostou), redesenhado na identidade nova.
+- Animação leve e fluida.
 
-## Não-metas / anti-metas
-- Nada de widgets genéricos de terceiros (stats cards, cobrinha, badges coloridos).
-- Nada que dependa de servidor externo para aparecer.
-- Nada de efeito "papel de parede" atrás do texto: o efeito nasce das letras.
+## Anti-metas
+- Nada de numeração de seção ("01 / Sobre") nem de etiquetas mono: dão cara de modelo feito por IA.
+- Nada de manifesto, pilares numerados ou faixa de tecnologias: blocos de modelo pronto.
+- Não repetir o portfólio: nem o preto neutro, nem a Space Grotesk, nem vazado/sólido, nem o corte diagonal, nem os feixes de luz.
+
+## Abordagens consideradas (escolha do Washington: 1)
+1. **Fios de luz** — o nome tecido por centenas de fios que seguem um "vento"; pulsos de luz correm pelos fios e acendem ao atravessar as letras. Paleta noite + âmbar/coral.
+2. Grade de dias — o nome montado com ~2 mil quadradinhos, como um gráfico de contribuições em alta resolução.
+3. Água — o nome fatiado em faixas que ondulam como reflexo; visual editorial claro.
+
+## Sistema
+- **Cores:** noite `#0b0c10` (fundo de todo painel, com cantos arredondados), texto creme quente `#f3eee6`, âmbar `#ffb347` e coral `#ff7a45`.
+- **Âmbar = luz:** só o que se move ou está ao vivo (pulsos, "disponível", hoje no gráfico, o botão principal).
+- **Fonte:** Syne (OFL), embutida só com as letras usadas. O nome em 700: a 800 é larga demais para "WASHINGTON".
+- **Fio:** o nome e "Me chama." são tecidos; divisórias e a moldura do Gemóvel são fios por onde a luz passa.
+
+## Peças (em ordem)
+1. **Nome:** WASHINGTON / GABRIEL tecidos por fios (linhas de fluxo com espaçamento uniforme, Jobard & Lefer), sobre um vento de fios quase invisíveis. Chegam numa frente ondulada que acende os fios; depois, pulsos com rastro cruzam o painel e acendem dentro das letras. Ao lado de GABRIEL: "Desenvolvedor full stack / em formação, de Hortolândia (SP)" e "● Disponível para trabalho".
+2. **Gemóvel:** título, descrição, a tela grande; a Agenda entra tecida, faixa por faixa, com uma "lançadeira" de luz na borda de cada faixa, e sai do mesmo jeito. A luz dá a volta na moldura. Ficha: Ano, Tipo, Stack, Equipe (em dupla com Arthur Gazzoli). Botões "Abrir o Gemóvel" (âmbar) e "Ver o código".
+3. **Contribuições:** o total grande, três números (maior sequência, sequência atual, dia mais ativo), um fio que soma cada semana (curva monótona, com a luz correndo) e a grade de dias em quatro tons de âmbar; dia parado é um pontinho.
+4. **Contato:** "Tem uma vaga ou uma ideia?" e "Me chama." tecido, e-mail, status. Botões E-mail (âmbar), LinkedIn, WhatsApp.
+5. **Rodapé:** "Portfólio completo chegando em breve." sobre o vento ralo. Quando o portfólio sair, vira um botão "Ver portfólio".
 
 ## Restrições do GitHub
-- README não aceita JS nem CSS: a animação mora dentro de SVGs (CSS dentro do SVG), mostrados como imagem.
-- Fontes embutidas em base64 no SVG, só com os glifos usados (subconjunto).
-- Clique não funciona dentro do SVG: links são SVGs separados envolvidos por `<a>`.
-- Imagens dentro de SVG só funcionam como data URI.
-
-## Abordagens do gráfico
-1. Serviço de terceiros: zero setup, cara genérica, cai com frequência.
-2. Cobrinha (snk): clichê.
-3. **Escolhida:** Action diária no repositório do perfil que consulta a API GraphQL e gera `assets/contribuicoes.svg` no estilo do portfólio (dia sem contribuição vazado, com contribuição sólido, hoje verde).
-
-## Estrutura do README (em ordem)
-1. Hero: W digitado barra a barra + cursor verde; WASHINGTON vazado que preenche; GABRIEL sólido; anotações mono (Portfólio / 2026, ● Disponível, Hortolândia, SP).
-2. Manifesto preenchendo palavra por palavra.
-3. Faixa creme com as tecnologias correndo.
-4. Projeto 01 / Gemóvel: print que renderiza do rascunho à tela real; ficha (2026, em dupla com Arthur Gazzoli, stack); botões Abrir demo ↗ e Código.
-5. Contribuições (gerado pela Action).
-6. Contato: "Vamos construir algo com presença?" + E-mail, LinkedIn, WhatsApp.
-7. "Portfólio completo: em breve" (vazado).
-8. Assinatura: WASHINGTON GABRIEL com luz atravessando as letras.
-
-Texto em PT-BR com uma linha curta em inglês. `prefers-reduced-motion` dentro de cada SVG deixa tudo sólido e parado.
+- README não roda JS nem CSS próprio: a animação mora dentro de SVGs mostrados como `<img>`. Links são SVGs separados dentro de `<a>`.
+- Imagens e fontes dentro do SVG só como data URI.
+- Animação só com `transform`, `opacity` e `stroke-dashoffset`; recortes sincronizados em SMIL. Sem filtro nem desfoque.
+- "Reduzir movimento": cada SVG mostra um quadro parado, com a luz parada no meio dos fios.
 
 ## Decisões do construtor
-- Gerador em Python (sem dependências além de fontTools) que monta todos os SVGs a partir de um único script; assim a identidade fica centralizada.
-- Arquivos em `Desktop/github-perfil/`, pronto para virar o repositório `Washington-dev-fullstack`. Publicação fica com o Washington.
+- `fios.py` (numpy + Pillow) gera os fios só no `gerar.py`, rodado à mão. `luz.py` (sem dependências) tem os pulsos e serve também ao gráfico da Action, que continua precisando só do fonttools.
+- Todos os pulsos têm o mesmo período (pathLength normalizado), então uma só animação e as mesmas classes servem a todos.
