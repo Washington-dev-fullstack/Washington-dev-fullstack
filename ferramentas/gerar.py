@@ -331,7 +331,7 @@ def contato() -> str:
     divisor, css_div = fio_divisor(y_div, rnd, prefixo="d", atraso=1.2)
     corpo.append(divisor)
     y = y_div + 56
-    corpo.append(t.texto(M, y, "coyotisr@gmail.com", tamanho=28, peso=600, extra=entra(1.5)))
+    corpo.append(t.texto(M, y, "washington.gab.dev@gmail.com", tamanho=28, peso=600, extra=entra(1.5)))
     corpo.append(t.texto(M, y + 32, "Estou em busca da minha primeira oportunidade. Respondo rápido.",
                          tamanho=16, cor=TEXTO_2, extra=entra(1.6)))
     status = "Disponível para trabalho"
@@ -340,7 +340,7 @@ def contato() -> str:
     corpo.append(t.texto(W - M, y + 32, "Hortolândia, SP · UTC−3", tamanho=15, cor=TEXTO_3, ancora="end", extra=entra(1.8)))
 
     return svg(W, altura, "".join(corpo), t, CSS_ENTRA + CSS_DESENHA + css + css_div,
-               titulo="Tem uma vaga ou uma ideia? Me chama. E-mail: coyotisr@gmail.com. "
+               titulo="Tem uma vaga ou uma ideia? Me chama. E-mail: washington.gab.dev@gmail.com. "
                       "Disponível para trabalho, Hortolândia (SP).")
 
 
