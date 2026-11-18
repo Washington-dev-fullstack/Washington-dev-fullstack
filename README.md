@@ -13,9 +13,9 @@
 
 <img src="assets/contribuicoes.svg" width="100%" alt="Gráfico de contribuições no GitHub no último ano.">
 
-<img src="assets/contato.svg" width="100%" alt="Tem uma vaga ou uma ideia? Me chama. E-mail: coyotisr@gmail.com. Estou em busca da minha primeira oportunidade e respondo rápido.">
+<img src="assets/contato.svg" width="100%" alt="Tem uma vaga ou uma ideia? Me chama. E-mail: washington.gab.dev@gmail.com. Estou em busca da minha primeira oportunidade e respondo rápido.">
 
-<a href="mailto:coyotisr@gmail.com"><img src="assets/botao-email.svg" height="52" alt="E-mail: coyotisr@gmail.com"></a>&nbsp;
+<a href="mailto:washington.gab.dev@gmail.com"><img src="assets/botao-email.svg" height="52" alt="E-mail: washington.gab.dev@gmail.com"></a>&nbsp;
 <a href="https://www.linkedin.com/in/washington-gabriel/"><img src="assets/botao-linkedin.svg" height="52" alt="LinkedIn: in/washington-gabriel"></a>&nbsp;
 <a href="https://wa.me/5519984134085"><img src="assets/botao-whatsapp.svg" height="52" alt="WhatsApp: +55 19 98413-4085"></a>
 
