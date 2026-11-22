@@ -18,7 +18,7 @@ python -m unittest discover -s ferramentas/testes
 
 - `fios.py` tece os fios (o nome e "Me chama."); `luz.py` faz os pulsos de luz e as divisórias.
 - Para trocar as telas do Gemóvel, substitua os PNGs de `ferramentas/capturas/` (1600 × 1000, com a faixa "Demonstração" no topo) e rode o `gerar.py`.
-- **Quando o portfólio for lançado:** troque o rodapé ("Portfólio completo chegando em breve.") por um botão âmbar "Ver portfólio" com o link do site.
+- **Portfólio no ar (nov/2026):** o rodapé avisa e o botão âmbar "Ver portfólio" (`botao-portfolio.svg`) leva a https://washington-dev-fullstack.github.io/. Se o endereço mudar, troque o link no `README.md`.
 
 ## Regras do sistema ("Fios de luz")
 

@@ -19,4 +19,6 @@
 <a href="https://www.linkedin.com/in/washington-gabriel/"><img src="assets/botao-linkedin.svg" height="52" alt="LinkedIn: in/washington-gabriel"></a>&nbsp;
 <a href="https://wa.me/5519984134085"><img src="assets/botao-whatsapp.svg" height="52" alt="WhatsApp: +55 19 98413-4085"></a>
 
-<img src="assets/rodape.svg" width="100%" alt="Portfólio completo chegando em breve. © 2026 Washington Gabriel.">
+<img src="assets/rodape.svg" width="100%" alt="Portfólio completo no ar: projetos, currículo e contato. © 2026 Washington Gabriel.">
+
+<a href="https://washington-dev-fullstack.github.io/"><img src="assets/botao-portfolio.svg" height="52" alt="Ver o portfólio: washington-dev-fullstack.github.io"></a>

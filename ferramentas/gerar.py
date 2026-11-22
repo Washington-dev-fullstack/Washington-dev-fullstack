@@ -358,10 +358,11 @@ def rodape() -> str:
     divisor, css_div = fio_divisor(42, rnd, prefixo="d", atraso=0.2)
     corpo.append(divisor)
     css.append(css_div)
-    corpo.append(t.texto(M, 82, "Portfólio completo chegando em breve.", tamanho=17, peso=600, cor=TEXTO_2))
+    # O portfólio saiu (nov/2026): o rodapé avisa, e o botão âmbar "Ver portfólio" vem logo abaixo no README
+    corpo.append(t.texto(M, 82, "Portfólio completo no ar: projetos, currículo e contato.", tamanho=17, peso=600, cor=TEXTO_2))
     corpo.append(t.texto(W - M, 82, "© 2026 Washington Gabriel", tamanho=15, cor=TEXTO_3, ancora="end"))
     return svg(W, altura, "".join(corpo), t, "".join(css),
-               titulo="Portfólio completo chegando em breve. © 2026 Washington Gabriel.")
+               titulo="Portfólio completo no ar: projetos, currículo e contato. © 2026 Washington Gabriel.")
 
 
 def main(apenas: set[str] | None = None):
@@ -375,6 +376,7 @@ def main(apenas: set[str] | None = None):
         "botao-email.svg": lambda: botao("E-mail", primario=True),
         "botao-linkedin.svg": lambda: botao("LinkedIn"),
         "botao-whatsapp.svg": lambda: botao("WhatsApp"),
+        "botao-portfolio.svg": lambda: botao("Ver portfólio", primario=True),
     }
     for nome, gerar in arquivos.items():
         if apenas and nome not in apenas:
